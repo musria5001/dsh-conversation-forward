@@ -10,7 +10,7 @@
  * resolves the `seq` list and does the rest.
  */
 window.__ModuleLoader__.load({
-	id: "@local/dsh-forward-panel",
+	id: "dsh-forward-panel",
 	factory: (require) => {
 		const React = require("react");
 		const h = React.createElement;

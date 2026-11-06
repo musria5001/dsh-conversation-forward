@@ -14,7 +14,7 @@ import { randomUUID } from "node:crypto";
 import { statSync } from "node:fs";
 import Schema from "@deepseek-ai/schemastery";
 
-export const name = "@local/dsh-forward-panel";
+export const name = "dsh-forward-panel";
 export const inject = ["webServer", "agents", "agentPresets", "workspaceRegistry"];
 
 export const Config = Schema.object({

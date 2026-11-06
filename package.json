@@ -1,5 +1,5 @@
 {
-  "name": "@local/dsh-forward-panel",
+  "name": "dsh-forward-panel",
   "version": "1.0.0",
   "private": false,
   "type": "module",

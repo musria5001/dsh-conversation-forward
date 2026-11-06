@@ -11,7 +11,7 @@
 
 ```bash
 # 从本地目录（开发）
-dsh plugin add D:\path\to\forward-panel
+dsh plugin add dsh-forward-panel
 
 # 或从 npm（发布后）
 dsh plugin add dsh-forward-panel
