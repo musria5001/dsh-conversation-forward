@@ -112,8 +112,10 @@ async function createSession(ctx, cwd, prompt, route, preset) {
 	const created = await ctx.agents.create({
 		sessionId,
 		meta: { cwd },
-		/* A bare agent has no model on its request header, and the preset's persona
-		 * prefix needs one (`{{model}}`), so the route pins the caller's route. */
+		/* The preset persona prefix interpolates `{{model}}`, and a bare agent has no
+		 * model on its first request header, so the initial route is pinned here.
+		 * Deliberately no per-request hook: after creation the session must behave
+		 * like any other and keep honouring the composer's model picker. */
 		agentOptions: { ...selection },
 		setup: async (agentCtx) => {
 			try {
@@ -121,17 +123,6 @@ async function createSession(ctx, cwd, prompt, route, preset) {
 			}
 			catch (error) {
 				console.warn("[forward-panel] preset mount failed:", error instanceof Error ? error.message : String(error));
-			}
-			if (selection.provider !== undefined && selection.model !== undefined) {
-				agentCtx.on("agent/request", async (payload, next) => {
-					const resolved = await next();
-					return {
-						...resolved,
-						provider: selection.provider,
-						model: selection.model,
-						...(selection.reasoningEffort === undefined ? {} : { reasoningEffort: selection.reasoningEffort })
-					};
-				});
 			}
 		}
 	});
