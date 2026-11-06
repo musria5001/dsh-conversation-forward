@@ -51,6 +51,24 @@ The model matters because the shipped preset persona prefix interpolates
 → `{"ok":true,"sessionId":"sb-…","workspaceId":"…"}` or
 `{"ok":false,"code":"…","params":{…}}`.
 
+### The inherited route only seeds the first turn
+
+The inherited `route` is written into the new session's first `request/header`
+only. Afterwards the session is a normal one: the model picker keeps working and
+writes later headers. The plugin installs no `agent/request` hook and never
+overrides a later switch.
+
+### Preset inheritance
+
+`preset` resolves as: plugin config → the source session's `agentPreset` →
+`standard`, so users on `minimal`, `ptc`, or a custom preset get the same one.
+
+### Optional dependency
+
+`sessionPersistence` is not required: without it the plugin still works, it just
+cannot inherit the source route/preset and falls back to plugin config
+(`E_NO_MODEL` when both are empty).
+
 ## Limits
 
 - `cwd` must already exist and be a registered workspace

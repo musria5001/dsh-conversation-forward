@@ -15,13 +15,15 @@ import { statSync } from "node:fs";
 import Schema from "@deepseek-ai/schemastery";
 
 export const name = "dsh-forward-panel";
-export const inject = ["webServer", "agents", "agentPresets", "workspaceRegistry", "sessionPersistence"];
+/* `sessionPersistence` is read through `ctx.get()` at request time: declaring it
+ * as a required inject would keep the whole plugin pending on a host that lacks it. */
+export const inject = ["webServer", "agents", "agentPresets", "workspaceRegistry"];
 
 export const Config = Schema.object({
 	provider: Schema.string().default("").description("兜底 provider；留空则自动继承来源会话（推荐）"),
 	model: Schema.string().default("").description("兜底模型；留空则自动继承来源会话（推荐）"),
 	reasoningEffort: Schema.string().default("").description("可选兜底推理强度，例如 high / medium / low"),
-	preset: Schema.string().default("standard").description("新建会话挂载的 agent 预设名")
+	preset: Schema.string().default("").description("agent 预设名；留空则继承来源会话，再退回 standard")
 });
 
 const ROUTE = "/api/forward-panel/create";
@@ -65,29 +67,46 @@ function userMessage(text) {
 }
 
 /**
- * Read the model route a source session is actually running with, so the new
- * session inherits this host's own configuration instead of asking the user.
- * @param ctx - plugin context carrying `sessionPersistence`.
+ * Read what a source session is actually running with, so the new session
+ * inherits this host's own configuration instead of asking the user.
+ *
+ * `sessionPersistence` is an optional inject: on a host without it this returns
+ * an empty result and the caller falls back to plugin config.
+ *
+ * @param ctx - plugin context (may or may not carry `sessionPersistence`).
  * @param sessionId - the session the forward request came from.
- * @returns `{ provider, model, reasoningEffort }` or `null` when unknown.
+ * @returns `{ route: {provider, model, reasoningEffort} | null, preset: string }`.
  */
-async function inheritRoute(ctx, sessionId) {
-	if (typeof sessionId !== "string" || sessionId === "") return null;
+async function readSourceConfig(ctx, sessionId) {
+	const empty = { route: null, preset: "" };
+	if (typeof sessionId !== "string" || sessionId === "") return empty;
+	const persistence = typeof ctx.get === "function" ? ctx.get("sessionPersistence") : undefined;
+	if (persistence === undefined || persistence === null) return empty;
 	try {
-		const handle = await ctx.sessionPersistence.open(sessionId, "read");
+		const handle = await persistence.open(sessionId, "read");
 		try {
 			const result = await handle.read();
 			const events = Array.isArray(result && result.events) ? result.events : [];
 			let config = null;
+			let preset = "";
 			for (const event of events) {
-				const header = event && event.type === "request/header" ? event.data && event.data.header : null;
-				if (header && header.config && typeof header.config === "object") config = header.config;
+				if (!event || typeof event !== "object") continue;
+				if (event.type === "request/header") {
+					const header = event.data && event.data.header;
+					if (header && header.config && typeof header.config === "object") config = header.config;
+				}
+				if (event.type === "session") {
+					const header = event.data && event.data.header;
+					if (header && typeof header.agentPreset === "string") preset = header.agentPreset;
+				}
 			}
-			if (config === null) return null;
 			return {
-				provider: typeof config.provider === "string" ? config.provider : "",
-				model: typeof config.model === "string" ? config.model : "",
-				reasoningEffort: typeof config.reasoningEffort === "string" ? config.reasoningEffort : ""
+				route: config === null ? null : {
+					provider: typeof config.provider === "string" ? config.provider : "",
+					model: typeof config.model === "string" ? config.model : "",
+					reasoningEffort: typeof config.reasoningEffort === "string" ? config.reasoningEffort : ""
+				},
+				preset
 			};
 		}
 		finally {
@@ -96,7 +115,7 @@ async function inheritRoute(ctx, sessionId) {
 	}
 	catch (error) {
 		console.warn("[forward-panel] inherit route failed:", error instanceof Error ? error.message : String(error));
-		return null;
+		return empty;
 	}
 }
 
@@ -177,9 +196,10 @@ export function apply(ctx, config) {
 			 * (fully adaptive) → plugin config → a clear error. */
 			const fromPayload = payload && payload.route && typeof payload.route === "object" ? payload.route : {};
 			const sourceSessionId = payload && typeof payload.sessionId === "string" ? payload.sessionId : "";
-			const inherited = fromPayload.provider !== undefined && fromPayload.provider !== "" && fromPayload.model !== undefined && fromPayload.model !== ""
-				? null
-				: await inheritRoute(ctx, sourceSessionId);
+			const source = fromPayload.provider !== undefined && fromPayload.provider !== "" && fromPayload.model !== undefined && fromPayload.model !== ""
+				? { route: null, preset: "" }
+				: await readSourceConfig(ctx, sourceSessionId);
+			const inherited = source.route;
 			const route = {
 				provider: typeof fromPayload.provider === "string" && fromPayload.provider !== ""
 					? fromPayload.provider
@@ -191,6 +211,7 @@ export function apply(ctx, config) {
 					? fromPayload.reasoningEffort
 					: (inherited !== null && inherited.reasoningEffort !== "" ? inherited.reasoningEffort : fallbackRoute.reasoningEffort)
 			};
+			const effectivePreset = preset !== "" ? preset : (source.preset !== "" ? source.preset : DEFAULT_PRESET);
 			if (route.provider === "" || route.model === "") {
 				return json(res, 400, {
 					ok: false,
@@ -199,8 +220,15 @@ export function apply(ctx, config) {
 				});
 			}
 			try {
-				const out = await createSession(ctx, cwd, prompt, route, preset);
-				return json(res, 200, { ok: true, ...out });
+				const out = await createSession(ctx, cwd, prompt, route, effectivePreset);
+				return json(res, 200, {
+					ok: true,
+					...out,
+					preset: effectivePreset,
+					...(out.workspaceId === undefined
+						? { note: "该目录不是已注册工作区：会话已建好，但不会出现在侧栏分组下（可把目录加为工作区后重试）" }
+						: {})
+				});
 			}
 			catch (error) {
 				return json(res, 500, { ok: false, code: "E_CREATE_FAILED", params: { message: error instanceof Error ? error.message : String(error) } });

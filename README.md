@@ -64,8 +64,28 @@ dsh plugin add dsh-forward-panel
 
 `sessionId`（可选）指向**来源会话**：不传 `route` 时插件会读它的模型并继承，所以跨用户、跨 DSH 配置都能自动适配。`route` 只在需要强制指定模型时使用。
 
-成功：`{"ok":true,"sessionId":"sb-…","workspaceId":"…"}`
+成功：`{"ok":true,"sessionId":"sb-…","workspaceId":"…","preset":"standard"}`
 失败：`{"ok":false,"code":"E_NO_MODEL|E_CWD_MISSING|E_NO_PROMPT|…","params":{…}}`
+
+当 `workspaceId` 缺失时，返回里会带一条 `note`：该目录不是已注册工作区，会话建好了但不会出现在侧栏分组下。
+
+### 初始模型只用于首轮
+
+继承来的 `route` 只写进新会话**第一条请求头**（`request/header`）。会话建好之后它就是**普通会话**：
+
+- 模型选择器照常可用，切换会写进后续的 `request/header`
+- 插件**不会**再干预任何请求（没有 `agent/request` 钩子）
+
+换句话说：自适应只负责"第一轮能跑起来，且用你当前在用的模型"。
+
+### 预设也会继承
+
+`preset` 的解析顺序：插件配置 → **来源会话的 `agentPreset`** → `standard`。
+所以用 `minimal`、`ptc` 或自定义预设的人，转发出来的会话同样是那套预设。
+
+### 可选依赖降级
+
+`sessionPersistence` 不是硬依赖：宿主没有这个服务时，插件照常工作，只是无法继承来源会话的模型/预设，会退回插件配置（都没填就返回 `E_NO_MODEL`）。
 
 ## 限制与注意
 
@@ -73,6 +93,7 @@ dsh plugin add dsh-forward-panel
 - 单条消息上限 4000 字、总计 60000 字，超出自动截断并在请求里标 `truncated`
 - 工具调用步骤不参与转发（面板里显示为 `⚙ N 次工具调用`，只作参考）
 - 新会话 id 前缀是 `sb-`；如果你用第三方"删除会话"插件，确认它接受非 `session-` 前缀
+- 路由只接受回环 Host（`127.0.0.1` / `localhost` / `::1`）；DSH 放在局域网代理后面时，请让调用方直接用本机地址
 
 ## 许可
 
