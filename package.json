@@ -1,49 +1,50 @@
 {
-  "name": "dsh-forward-panel",
-  "version": "1.0.0",
-  "private": false,
-  "type": "module",
-  "description": "Pick conversation messages in the DSH Web GUI and forward them verbatim or as a summary into a new session in another workspace.",
-  "keywords": [
-    "dsh",
-    "dsh-plugin",
-    "deepseek-harness",
-    "conversation",
-    "forward",
-    "summary",
-    "session"
-  ],
-  "license": "MIT",
-  "files": [
-    "index.js",
-    "client.js",
-    "cordis.patch.yml",
-    "README.md",
-    "README.en.md",
-    "LICENSE"
-  ],
-  "exports": {
-    ".": "./index.js",
-    "./client": "./client.js",
-    "./cordis.patch.yml": "./cordis.patch.yml",
-    "./package.json": "./package.json"
-  },
-  "engines": {
-    "node": ">=20"
-  },
-  "dsh": {
-    "bundle": {
-      "patch": "./cordis.patch.yml"
-    },
-    "client": {
-      "platform": "web",
-      "immediately": true,
-      "inject": [
-        "@deepseek-ai/dsh-client-ui-conversation"
-      ]
-    }
-  },
-  "dependencies": {
-    "@deepseek-ai/schemastery": "^3.19.0"
-  }
+    "name":  "dsh-forward-panel",
+    "version":  "1.0.0",
+    "private":  false,
+    "type":  "module",
+    "description":  "Pick conversation messages in the DSH Web GUI and forward them verbatim or as a summary into a new session in another workspace.",
+    "keywords":  [
+                     "dsh",
+                     "dsh-plugin",
+                     "deepseek-harness",
+                     "conversation",
+                     "forward",
+                     "summary",
+                     "session"
+                 ],
+    "license":  "MIT",
+    "files":  [
+                  "index.js",
+                  "client.js",
+                  "cordis.patch.yml",
+                  "README.md",
+                  "README.en.md",
+                  "CHANGELOG.md",
+                  "LICENSE"
+              ],
+    "exports":  {
+                    ".":  "./index.js",
+                    "./client":  "./client.js",
+                    "./cordis.patch.yml":  "./cordis.patch.yml",
+                    "./package.json":  "./package.json"
+                },
+    "engines":  {
+                    "node":  "\u003e=20"
+                },
+    "dsh":  {
+                "bundle":  {
+                               "patch":  "./cordis.patch.yml"
+                           },
+                "client":  {
+                               "platform":  "web",
+                               "immediately":  true,
+                               "inject":  [
+                                              "@deepseek-ai/dsh-client-ui-conversation"
+                                          ]
+                           }
+            },
+    "dependencies":  {
+                         "@deepseek-ai/schemastery":  "^3.19.0"
+                     }
 }

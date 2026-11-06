@@ -105,6 +105,10 @@ POST /api/forward-panel/create
 - 新会话 id 前缀是 `sb-`；如果你用第三方"删除会话"插件，确认它接受非 `session-` 前缀
 - 路由只接受回环 Host（`127.0.0.1` / `localhost` / `::1`）；DSH 放在局域网代理后面时，请让调用方直接用本机地址
 
+## 更新日志
+
+见 [CHANGELOG.md](CHANGELOG.md)。
+
 ## 许可
 
 MIT
