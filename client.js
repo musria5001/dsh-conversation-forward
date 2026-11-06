@@ -303,6 +303,9 @@ window.__ModuleLoader__.load({
 			const [target, setTarget] = React.useState("");
 			const [sent, setSent] = React.useState(false);
 			const [folded, setFolded] = React.useState(() => new Set());
+			/* Guards double clicks: a second submit while the first is still going
+			 * would post a second `[forward-request]` and create two sessions. */
+			const submitting = React.useRef(false);
 
 			const parsed = readableEntries(chat);
 			const rows = parsed.rows;
@@ -329,11 +332,14 @@ window.__ModuleLoader__.load({
 			}
 
 			function submit() {
+				if (submitting.current) return;
 				const chosen = scope === "all" ? sendable : sendable.filter((row) => picked.has(row.seq));
 				const clipped = clipItems(chosen
 					.filter((row) => Number.isFinite(row.seq) && row.seq > 0)
 					.map((row) => ({ seq: row.seq, role: row.kind, text: row.label })));
 				if (clipped.items.length === 0) return;
+				submitting.current = true;
+				setTimeout(() => { submitting.current = false; }, 1500);
 				const payload = {
 					sessionId: props.sessionId ?? null,
 					mode,

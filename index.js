@@ -169,6 +169,11 @@ export function apply(ctx, config) {
 		reasoningEffort: typeof settings.reasoningEffort === "string" ? settings.reasoningEffort.trim() : ""
 	};
 	const preset = typeof settings.preset === "string" && settings.preset.trim() !== "" ? settings.preset.trim() : DEFAULT_PRESET;
+	/* Idempotency window: the same (cwd, prompt) posted twice in a row — a double
+	 * click or an agent retry — must reuse the first session instead of creating a
+	 * second one. */
+	const recent = new Map();
+	const DEDUPE_MS = 15_000;
 	ctx.effect(() => ctx.webServer.register({
 		kind: "exact",
 		path: ROUTE,
@@ -219,8 +224,19 @@ export function apply(ctx, config) {
 					params: { hint: "请求里带上 sessionId（自动继承该会话的模型），或在 设置 → 插件 → 摘选转发 里填写 provider / model" }
 				});
 			}
+			const dedupeKey = cwd + "\u0000" + prompt;
+			const now = Date.now();
+			for (const [key, entry] of recent) {
+				if (now - entry.at > DEDUPE_MS) recent.delete(key);
+			}
+			const seen = recent.get(dedupeKey);
+			if (seen !== undefined) {
+				return json(res, 200, { ok: true, ...seen.value, preset: seen.preset, deduped: true });
+			}
 			try {
 				const out = await createSession(ctx, cwd, prompt, route, effectivePreset);
+				const value = { sessionId: out.sessionId, ...(out.workspaceId === undefined ? {} : { workspaceId: out.workspaceId }) };
+				recent.set(dedupeKey, { at: now, value, preset: effectivePreset });
 				return json(res, 200, {
 					ok: true,
 					...out,
