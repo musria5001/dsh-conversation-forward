@@ -1,0 +1,11 @@
+# Plugin row for the forward panel.
+# `config.provider` / `config.model` default to empty: the panel's request then
+# carries its own `route`, or the agent passes one when it posts the session.
+- insert:
+    - id: forward-panel
+      name: "@local/dsh-forward-panel"
+      config:
+        provider: ""
+        model: ""
+        reasoningEffort: ""
+        preset: standard
