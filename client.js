@@ -16,6 +16,7 @@ window.__ModuleLoader__.load({
 		const h = React.createElement;
 
 		const PANEL_ID = "forward-panel";
+		const CREATE_ROUTE = "/api/forward-panel/create";
 		const MAX_ITEM_CHARS = 4000;
 		const MAX_TOTAL_CHARS = 60000;
 
@@ -303,6 +304,7 @@ window.__ModuleLoader__.load({
 			const [target, setTarget] = React.useState("");
 			const [sent, setSent] = React.useState(false);
 			const [folded, setFolded] = React.useState(() => new Set());
+			const [result, setResult] = React.useState(null);
 			/* Guards double clicks: a second submit while the first is still going
 			 * would post a second `[forward-request]` and create two sessions. */
 			const submitting = React.useRef(false);
@@ -340,6 +342,28 @@ window.__ModuleLoader__.load({
 				if (clipped.items.length === 0) return;
 				submitting.current = true;
 				setTimeout(() => { submitting.current = false; }, 1500);
+				/* Verbatim + new session needs no model: the panel has the text, so it
+				 * posts to its own host route directly and a third-party install works
+				 * even when the conversation's agent does nothing. */
+				if (deliver === "new-workspace" && mode === "verbatim" && effectiveTarget !== "") {
+					const prompt = clipped.items
+						.map((item) => "【" + (item.role === "user" ? "我" : "AI") + " #" + item.seq + "】\n" + item.text)
+						.join("\n\n");
+					setResult({ ok: null });
+					fetch(CREATE_ROUTE, {
+						method: "POST",
+						headers: { "content-type": "application/json" },
+						body: JSON.stringify({ cwd: effectiveTarget, sessionId: props.sessionId ?? null, prompt })
+					})
+						.then((response) => response.json().catch(() => ({ ok: false, code: "E_BAD_RESPONSE" })))
+						.then((data) => {
+							setResult(data);
+							setSent(data && data.ok === true);
+						}, (error) => {
+							setResult({ ok: false, code: "E_FETCH", params: { message: String(error && error.message ? error.message : error) } });
+						});
+					return;
+				}
 				const payload = {
 					sessionId: props.sessionId ?? null,
 					mode,
@@ -473,8 +497,16 @@ window.__ModuleLoader__.load({
 							}, sent ? "已提交 ✓" : deliver === "new-workspace" ? "新建对话" : "生成文案"),
 							h("span", { className: "dfp-hint" },
 								deliver === "new-workspace"
-									? "在所选工作区新建会话，转发文案作为首条消息；完成后我给你工作区路径和会话 id"
+									? "在所选工作区新建会话（原文模式由面板直接建，摘要模式交给对话里的助手）"
 									: "不新建任何东西，只在本对话输出一段可复制的文案"),
+							result
+								? h("span", { className: "dfp-hint" },
+									result.ok === true
+										? "已建会话 " + String(result.sessionId || "") + (result.deduped === true ? "（复用了刚才那次）" : "")
+										: result.ok === false
+											? "失败: " + String(result.code || "?") + (result.params && result.params.message ? " · " + result.params.message : (result.params && result.params.hint ? " · " + result.params.hint : ""))
+											: "创建中…")
+								: null,
 							h("span", { className: "dfp-hint" },
 								"单条 " + MAX_ITEM_CHARS + " 字、总计 " + (MAX_TOTAL_CHARS / 1000) + "k 字内，超出自动截断；工具调用不转发"))))
 				: null;
