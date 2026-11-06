@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 使用文档 / Usage docs
+    url: https://github.com/musria5001/dsh-forward-panel#readme
+    about: 安装、配置项、宿主接口（POST /api/forward-panel/create）、已知限制都写在 README 里，先看一眼也许就有答案。

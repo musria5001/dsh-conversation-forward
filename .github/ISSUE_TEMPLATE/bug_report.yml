@@ -1,0 +1,112 @@
+name: Bug report
+description: 面板功能异常、报错、或行为与预期不符
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。请尽量填全，尤其是 **版本**、**复现步骤** 和 **接口返回** —— 这三项能直接定位大多数问题。
+        > 提交前请先刷新一次页面（Ctrl+R）并重试，插件的前端模块需要重新加载。
+
+  - type: input
+    id: dsh-version
+    attributes:
+      label: DSH 版本
+      description: 设置 → 关于，或 `dsh --version`
+      placeholder: 例如 0.2.1-rc.5
+    validations:
+      required: true
+
+  - type: input
+    id: plugin-version
+    attributes:
+      label: 插件版本
+      description: `package.json` 里的 version，或安装时日志里的版本号
+      placeholder: 例如 1.0.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: 安装方式
+      options:
+        - GitHub（dsh plugin add github:musria5001/dsh-forward-panel）
+        - 本地目录（dsh plugin add ./dsh-forward-panel）
+        - npm（dsh plugin add dsh-forward-panel）
+        - 其他 / 不确定
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 出问题的部分
+      options:
+        - 面板列表（勾选 / 消息缺失）
+        - 折叠与工具调用分组
+        - 文案生成（只输出文案）
+        - 新建对话
+        - 模型 / 预设继承
+        - 配置页（provider / model / preset）
+        - 安装或加载失败（插件不激活 / 按钮不出现）
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 打开任意会话，点输入框左侧「摘选」
+        2. 勾选 2 条消息，选「摘要 + 新建对话」
+        3. 点底部「新建对话」
+        4. …
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望结果
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果
+      description: 面板上显示的文字、错误码、会话是否被创建等
+    validations:
+      required: true
+
+  - type: textarea
+    id: api
+    attributes:
+      label: 接口返回（新建对话相关）
+      description: 面板底部的 `失败: E_…`，或 `POST /api/forward-panel/create` 的返回 JSON
+      render: json
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志 / 截图
+      description: 浏览器控制台错误、DSH 宿主日志、界面截图（可直接拖进来）
+
+  - type: input
+    id: os
+    attributes:
+      label: 操作系统
+      placeholder: Windows 11 / macOS 14 / Ubuntu 22.04
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 自查
+      options:
+        - label: 我已搜索过现有 issue
+          required: true
+        - label: 我已刷新页面并重试过
+          required: true
