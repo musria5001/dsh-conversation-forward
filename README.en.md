@@ -36,6 +36,31 @@ The model matters because the shipped preset persona prefix interpolates
 2. this plugin's `provider` / `model`
 3. otherwise `E_NO_MODEL`
 
+## Usage
+
+The plugin is an **agent-facing workflow**: the panel decides *what* to forward, the
+conversation's agent decides *how* to deliver it.
+
+1. Click the trigger next to the attach row, tick messages
+2. Pick `verbatim` / `summary` and `selected` / `whole session`
+3. Pick `new session` or `copyable text`, then press the footer button
+4. Two delivery paths:
+   - **verbatim + new session**: the panel composes the text and posts to
+     `/api/forward-panel/create` itself — no agent round trip
+   - **summary / copyable text**: the panel submits a `[forward-request]`
+     (items, `sessionId`, target workspace, API contract) to the current
+     conversation's agent, which writes the content and delivers it
+
+For `new session`, the agent only needs to do this:
+
+```
+POST /api/forward-panel/create
+{ "cwd": "<target dir>", "sessionId": "<source session>", "prompt": "<final text>" }
+```
+
+The provider/model/preset are inherited from `sessionId`; on `E_NO_MODEL`, retry
+with an explicit `route`.
+
 ## Host API
 
 `POST /api/forward-panel/create` (loopback Host only)
@@ -43,6 +68,7 @@ The model matters because the shipped preset persona prefix interpolates
 ```json
 {
   "cwd": "C:\\Users\\lenovo\\Desktop",
+  "sessionId": "session-…",
   "prompt": "first message for the new session",
   "route": { "provider": "deepseek-account", "model": "deepseek-flash" }
 }

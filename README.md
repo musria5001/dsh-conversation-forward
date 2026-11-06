@@ -41,13 +41,23 @@ dsh plugin add dsh-forward-panel
 
 ## 怎么用
 
+本插件是**面向 agent 的工作流**：面板负责"选什么"，对话里的 agent 负责"怎么投递"。
+
 1. 点「摘选」打开面板，勾选消息
 2. 选 `原文`/`摘要`、`选中`/`整段会话`
 3. 选 `新建对话` 或 `文案生成`，点底部按钮
-4. 面板会把一条 `[forward-request]` 提交给当前对话的助手，由助手：
-   - 生成最终文案（原文或它的摘要）
-   - `文案生成`：直接在对话里输出 ``` 代码块
-   - `新建对话`：`POST /api/forward-panel/create` 让插件自己建会话，再回报工作区路径与会话 id
+4. 两条投递路径：
+   - **原文 + 新建对话**：面板自己拼好文案并 `POST /api/forward-panel/create`，不经 agent，最快
+   - **摘要 / 文案生成**：面板提交一条 `[forward-request]`（含 `items`、`sessionId`、目标工作区与接口说明）给当前对话的 agent，由它生成内容并投递或直接输出
+
+`new-workspace` 模式下，agent 需要做的就是：
+
+```
+POST /api/forward-panel/create
+{ "cwd": "<目标目录>", "sessionId": "<来源会话>", "prompt": "<最终文案>" }
+```
+
+模型与预设会自动继承 `sessionId` 所属会话；返回 `E_NO_MODEL` 时再补 `route` 重试。
 
 ## 宿主接口（给其他插件/脚本用）
 
