@@ -25,16 +25,19 @@ dsh plugin add dsh-forward-panel
 
 | 字段 | 说明 |
 |---|---|
-`provider` | 新建会话使用的 provider（如 `deepseek-account`） |
-`model` | 新建会话使用的模型 id（如 `deepseek-flash`） |
-`reasoningEffort` | 可选，推理强度（如 `high`） |
+`provider` | 兜底 provider（**留空即可**，优先自动继承来源会话） |
+`model` | 兜底模型（**留空即可**，优先自动继承来源会话） |
+`reasoningEffort` | 可选兜底推理强度（如 `high`） |
 `preset` | 新建会话挂载的 agent 预设，默认 `standard` |
 
-**为什么需要 provider/model**：DSH 的预设人设前缀里有 `{{model}}` 占位符，新建的 agent 如果请求头没有模型，首轮会因为变量缺失而失败（`prompt variable "{{model}}" has no value`）。插件用下面的优先级解析模型：
+**模型怎么来的**（按优先级）：
 
-1. 请求体里的 `route`（面板转发的请求会带）
-2. 插件配置里的 `provider` / `model`
-3. 都没有 → 返回 `E_NO_MODEL`，提示去设置页填写
+1. 请求体里的 `route`（显式指定）
+2. **来源会话的模型** —— 请求里带 `sessionId`，插件读该会话最近一次 `request/header` 的 `provider` / `model` / `reasoningEffort` 并继承（**换人、换 DSH 配置都自动适配，无需配置**）
+3. 插件配置里的 `provider` / `model`
+4. 都没有 → `E_NO_MODEL`，提示补 `sessionId` 或填配置
+
+为什么必须有模型：DSH 预设的人设前缀里有 `{{model}}` 占位符，新建 agent 若请求头没有模型，首轮会失败（`prompt variable "{{model}}" has no value`）。
 
 ## 怎么用
 
@@ -53,10 +56,13 @@ dsh plugin add dsh-forward-panel
 ```json
 {
   "cwd": "C:\\Users\\lenovo\\Desktop",
+  "sessionId": "session-…",
   "prompt": "要写入新会话首条消息的文本",
-  "route": { "provider": "deepseek-account", "model": "deepseek-flash", "reasoningEffort": "high" }
+  "route": { "provider": "…", "model": "…", "reasoningEffort": "high" }
 }
 ```
+
+`sessionId`（可选）指向**来源会话**：不传 `route` 时插件会读它的模型并继承，所以跨用户、跨 DSH 配置都能自动适配。`route` 只在需要强制指定模型时使用。
 
 成功：`{"ok":true,"sessionId":"sb-…","workspaceId":"…"}`
 失败：`{"ok":false,"code":"E_NO_MODEL|E_CWD_MISSING|E_NO_PROMPT|…","params":{…}}`

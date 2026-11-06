@@ -15,12 +15,12 @@ import { statSync } from "node:fs";
 import Schema from "@deepseek-ai/schemastery";
 
 export const name = "dsh-forward-panel";
-export const inject = ["webServer", "agents", "agentPresets", "workspaceRegistry"];
+export const inject = ["webServer", "agents", "agentPresets", "workspaceRegistry", "sessionPersistence"];
 
 export const Config = Schema.object({
-	provider: Schema.string().default("").description("新建会话使用的 provider（留空则用请求里自带的 route）"),
-	model: Schema.string().default("").description("新建会话使用的模型 id（留空则用请求里自带的 route）"),
-	reasoningEffort: Schema.string().default("").description("可选的推理强度，例如 high / medium / low"),
+	provider: Schema.string().default("").description("兜底 provider；留空则自动继承来源会话（推荐）"),
+	model: Schema.string().default("").description("兜底模型；留空则自动继承来源会话（推荐）"),
+	reasoningEffort: Schema.string().default("").description("可选兜底推理强度，例如 high / medium / low"),
 	preset: Schema.string().default("standard").description("新建会话挂载的 agent 预设名")
 });
 
@@ -62,6 +62,42 @@ function readBody(req) {
 /** One durable user message value for `agent.followup`. */
 function userMessage(text) {
 	return { id: randomUUID(), role: "user", content: [{ type: "text", text }], source: { kind: "user" } };
+}
+
+/**
+ * Read the model route a source session is actually running with, so the new
+ * session inherits this host's own configuration instead of asking the user.
+ * @param ctx - plugin context carrying `sessionPersistence`.
+ * @param sessionId - the session the forward request came from.
+ * @returns `{ provider, model, reasoningEffort }` or `null` when unknown.
+ */
+async function inheritRoute(ctx, sessionId) {
+	if (typeof sessionId !== "string" || sessionId === "") return null;
+	try {
+		const handle = await ctx.sessionPersistence.open(sessionId, "read");
+		try {
+			const result = await handle.read();
+			const events = Array.isArray(result && result.events) ? result.events : [];
+			let config = null;
+			for (const event of events) {
+				const header = event && event.type === "request/header" ? event.data && event.data.header : null;
+				if (header && header.config && typeof header.config === "object") config = header.config;
+			}
+			if (config === null) return null;
+			return {
+				provider: typeof config.provider === "string" ? config.provider : "",
+				model: typeof config.model === "string" ? config.model : "",
+				reasoningEffort: typeof config.reasoningEffort === "string" ? config.reasoningEffort : ""
+			};
+		}
+		finally {
+			await handle.close();
+		}
+	}
+	catch (error) {
+		console.warn("[forward-panel] inherit route failed:", error instanceof Error ? error.message : String(error));
+		return null;
+	}
 }
 
 /** Create one main session bound to `cwd`, attach it to that workspace, post the first message. */
@@ -146,14 +182,30 @@ export function apply(ctx, config) {
 			catch {
 				return json(res, 400, { ok: false, code: "E_CWD_MISSING", params: { cwd } });
 			}
+			/* Resolution: explicit request route → the source session's own route
+			 * (fully adaptive) → plugin config → a clear error. */
 			const fromPayload = payload && payload.route && typeof payload.route === "object" ? payload.route : {};
+			const sourceSessionId = payload && typeof payload.sessionId === "string" ? payload.sessionId : "";
+			const inherited = fromPayload.provider !== undefined && fromPayload.provider !== "" && fromPayload.model !== undefined && fromPayload.model !== ""
+				? null
+				: await inheritRoute(ctx, sourceSessionId);
 			const route = {
-				provider: typeof fromPayload.provider === "string" && fromPayload.provider !== "" ? fromPayload.provider : fallbackRoute.provider,
-				model: typeof fromPayload.model === "string" && fromPayload.model !== "" ? fromPayload.model : fallbackRoute.model,
-				reasoningEffort: typeof fromPayload.reasoningEffort === "string" && fromPayload.reasoningEffort !== "" ? fromPayload.reasoningEffort : fallbackRoute.reasoningEffort
+				provider: typeof fromPayload.provider === "string" && fromPayload.provider !== ""
+					? fromPayload.provider
+					: (inherited !== null && inherited.provider !== "" ? inherited.provider : fallbackRoute.provider),
+				model: typeof fromPayload.model === "string" && fromPayload.model !== ""
+					? fromPayload.model
+					: (inherited !== null && inherited.model !== "" ? inherited.model : fallbackRoute.model),
+				reasoningEffort: typeof fromPayload.reasoningEffort === "string" && fromPayload.reasoningEffort !== ""
+					? fromPayload.reasoningEffort
+					: (inherited !== null && inherited.reasoningEffort !== "" ? inherited.reasoningEffort : fallbackRoute.reasoningEffort)
 			};
 			if (route.provider === "" || route.model === "") {
-				return json(res, 400, { ok: false, code: "E_NO_MODEL", params: { hint: "请在 设置 → 插件 → 摘选转发 里填写 provider 与 model，或在请求里带上 route" } });
+				return json(res, 400, {
+					ok: false,
+					code: "E_NO_MODEL",
+					params: { hint: "请求里带上 sessionId（自动继承该会话的模型），或在 设置 → 插件 → 摘选转发 里填写 provider / model" }
+				});
 			}
 			try {
 				const out = await createSession(ctx, cwd, prompt, route, preset);

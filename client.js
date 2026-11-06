@@ -347,8 +347,11 @@ window.__ModuleLoader__.load({
 				const where = deliver === "new-workspace"
 					? "先把选中的 items 整理成最终文案（原文或摘要），然后调用本机回环接口 POST "
 						+ "`/api/forward-panel/create`，请求体 `{\"cwd\": " + JSON.stringify(payload.workspace)
-						+ ", \"prompt\": \"<最终文案>\", \"route\": {\"provider\": \"<当前会话的 provider>\", \"model\": \"<当前模型>\", \"reasoningEffort\": \"<可选>\"}}`"
-						+ "——该接口由本插件自己提供，会新建会话并把 prompt 作为首条消息；成功后在本对话回复工作区路径与返回的 sessionId"
+						+ ", \"sessionId\": " + JSON.stringify(payload.sessionId)
+						+ ", \"prompt\": \"<最终文案>\"}`"
+						+ "——接口由本插件提供，会新建会话并把 prompt 作为首条消息；模型自动继承 sessionId 所属会话，"
+						+ "若接口返回 E_NO_MODEL 再补一个 `\"route\": {\"provider\": \"…\", \"model\": \"…\"}` 重试；"
+						+ "成功后在本对话回复工作区路径与返回的 sessionId"
 					: "不要新建会话或工作区，直接在本对话用 ``` 代码块输出可复制的转发文案";
 				const text = "[forward-request]\n" + JSON.stringify(payload)
 					+ "\n执行要求：" + where + "。"
