@@ -14,7 +14,7 @@ import { randomUUID } from "node:crypto";
 import { statSync } from "node:fs";
 import Schema from "@deepseek-ai/schemastery";
 
-export const name = "dsh-forward-panel";
+export const name = "dsh-conversation-forward";
 /* `sessionPersistence` is read through `ctx.get()` at request time: declaring it
  * as a required inject would keep the whole plugin pending on a host that lacks it. */
 export const inject = ["webServer", "agents", "agentPresets", "workspaceRegistry"];

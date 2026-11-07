@@ -3,7 +3,7 @@
 # carries its own `route`, or the agent passes one when it posts the session.
 - insert:
     - id: forward-panel
-      name: "dsh-forward-panel"
+      name: "dsh-conversation-forward"
       config:
         provider: ""
         model: ""

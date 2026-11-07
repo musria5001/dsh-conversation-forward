@@ -32,9 +32,9 @@ body:
     attributes:
       label: 安装方式
       options:
-        - GitHub（dsh plugin add github:musria5001/dsh-forward-panel）
-        - 本地目录（dsh plugin add ./dsh-forward-panel）
-        - npm（dsh plugin add dsh-forward-panel）
+        - GitHub（dsh plugin add github:musria5001/dsh-conversation-forward）
+        - 本地目录（dsh plugin add ./dsh-conversation-forward）
+        - npm（dsh plugin add dsh-conversation-forward）
         - 其他 / 不确定
     validations:
       required: true

@@ -1,4 +1,4 @@
-# dsh-forward-panel
+# dsh-conversation-forward
 
 在 DSH Web GUI 里**摘选对话 → 生成文案 → 投递到新会话**。
 
@@ -12,7 +12,7 @@
 ## 安装
 
 ```bash
-dsh plugin add github:musria5001/dsh-forward-panel
+dsh plugin add github:musria5001/dsh-conversation-forward
 ```
 
 装完刷新页面，输入框工具行左侧出现「摘选」按钮。

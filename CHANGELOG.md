@@ -3,6 +3,19 @@
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 的结构，
 版本号用 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.1.0] - 2026-11-07
+
+### 变更
+
+- **插件改名**：`dsh-forward-panel` → **`dsh-conversation-forward`**（更贴近"对话摘选转发"这件事）
+  - 包名、插件 id、客户端模块 id、GitHub 仓库名同步修改
+  - 升级方式：卸载旧的再装新的（插件 id 变了，不能原地覆盖）
+- 宿主路由 `/api/forward-panel/create` **保持不变**，已写进提示词的调用方无需改动
+
+### 新增
+
+- `dsh.catalog` 元数据：分类 `ui`、中英双语简介、能力列表（供插件市场上架展示）
+
 ## [1.0.0] - 2026-11-06
 
 首个可用版本。
@@ -32,7 +45,7 @@
 - **模型选择器被锁死**：早期实现给 `agent/request` 挂了强制钩子，导致新会话无法切换模型；已删除，初始路由只作用于首轮
 - **连点建出两个会话**：面板提交加了 1.5 秒去抖
 - **助手重试/并发请求重复建会话**：路由层对相同 `(cwd, prompt)` 做 15 秒幂等去重，返回同一 `sessionId`（带 `deduped: true`）
-- **改名后按钮消失**：包名、`cordis.patch.yml`、`index.js` 的 `export const name`、`client.js` 的模块 id 四处必须一致，已统一为 `dsh-forward-panel`
+- **改名后按钮消失**：包名、`cordis.patch.yml`、`index.js` 的 `export const name`、`client.js` 的模块 id 四处必须一致，已统一为 `dsh-conversation-forward`
 - **插件在缺少 `sessionPersistence` 的宿主上无法激活**：改为运行时 `ctx.get()` 读取，缺失时降级到配置
 
 ### 变更

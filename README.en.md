@@ -1,4 +1,4 @@
-# dsh-forward-panel
+# dsh-conversation-forward
 
 Pick conversation messages in the DSH Web GUI, produce a forwarding text, and
 deliver it into a new session in another workspace.
@@ -16,7 +16,7 @@ deliver it into a new session in another workspace.
 ## Install
 
 ```bash
-dsh plugin add github:musria5001/dsh-forward-panel
+dsh plugin add github:musria5001/dsh-conversation-forward
 ```
 
 Refresh the page; a trigger appears at the left of the composer tool row.
